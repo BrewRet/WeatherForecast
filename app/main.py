@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from app.config import get_settings
 from app.routers import router as weather_router
 from app.database import init_db
+from app.tasks import save_current_wether_every_15_min
 
 
 settings = get_settings()
@@ -25,7 +26,9 @@ logger.info(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    task = asyncio.create_task(save_current_wether_every_15_min())
     yield
+    task.cancel()
 
 app = FastAPI(
     title=settings.app_name,
