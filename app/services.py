@@ -2,11 +2,7 @@ from datetime import datetime
 import asyncio
 import httpx
 
-from fastapi import HTTPException
-
 import aiosqlite
-
-from app.dependancy import get_db
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 HTTP_TIMEOUT = 10.0
@@ -46,37 +42,67 @@ async def get_current_weather_to_show(lat: float, lon: float) -> dict:
 
 
 async def add_city_to_db(city: str, lat: float, lon: float, db: aiosqlite.Connection):
-    try:
-        await db.execute(
-            """
-            INSERT INTO cities (city, latitude, longitude)
-            VALUES (?, ?, ?)
-            """,
-            (city, lat, lon)
-        )
-        await db.commit()
-    except(aiosqlite.IntegrityError):
-        raise HTTPException(403, "Город уже добавлен")
+    """Добавление города в базу данных"""
+
+    await db.execute(
+        """
+        INSERT INTO cities (city, latitude, longitude)
+        VALUES (?, ?, ?)
+        """,
+        (city, lat, lon)
+    )
+   
 
 
-async def save_current_wether_every_15_min(city: str, lat: float, lon: float) -> dict:
-    """Запрос погоды: температура, влажность, скорость ветра, осадки"""
+async def get_list_of_cities(db:aiosqlite.Connection) -> list[str]:
+    """Выдача городов из базы данных"""
+
+    cursor = await db.execute(
+        """
+        SELECT city FROM cities 
+        """
+    )
+    cities = await cursor.fetchall()
+    result = []
+    for city in cities:
+        city = ''.join(city)
+        result.append(city)
+    return result
+
+
+async def save_current_wether_every_15_min(db: aiosqlite.Connection) -> None:
+    """"""
 
     while True:
-        db = get_db()
-        
-        weather = await fetch_current_weather_by_coords(lat, lon)
+        date = datetime.now()
+        cursor = await db.execute(
+            """
+            SELECT * FROM cities
+            """
+        )
+        cities_data = await cursor.fetchall()
+        for row in cities_data:
+            city, lat, lon, created_at = row
 
-        result = {
-            "city": city,
-            "time": weather["current"]["time"].split("T")[1],
-            "temperature": weather["current"]["temperature_2m"],
-            "humidity": weather["current"]["relative_humidity_2m"],
-            "wind_speed": weather["current"]["wind_speed_10m"],
-            "precipitation": weather["current"]["precipitation"],
-        }
+            #Добавить проверку даты города из таблицы cities
+
+            weather = await fetch_current_weather_by_coords(lat, lon)
+            await db.execute(
+                """
+                INSERT INTO WEATHER (city, temperature, himidity, wind_speed, preciptation)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (city, weather["current"]["temperature_2m"], weather["current"]["relative_humidity_2m"],
+                 weather["current"]["wind_speed_10m"], weather["current"]["precipitation"])
+            )
+            
         await asyncio.sleep(900.0)
 
+
+async def get_weather_from_db_by_city_time(city: str, time: str) -> dict:
+    """"""
+    
+    pass
 
 
 

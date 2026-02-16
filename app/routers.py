@@ -13,6 +13,7 @@ from app.schemas import (
 from app.services import (
     get_current_weather_to_show,
     add_city_to_db,
+    get_list_of_cities,
 )
 
 router = APIRouter(
@@ -50,8 +51,12 @@ async def add_city_with_coords(
     request: CityCreate,
     db: aiosqlite.Connection = Depends(get_db)) -> None:
     """Добавить город в список городов для мониторинга погоды"""
+    try:
+        await add_city_to_db(request.city, request.lat, request.lon, db)
+        return {"result": "Город успешно добавлен"}
+    except(aiosqlite.IntegrityError):
+        raise HTTPException(403, "Город уже добавлен")
     
-    return await add_city_to_db(request.city, request.lat, request.lon, db)
     
 
 
@@ -60,9 +65,10 @@ async def add_city_with_coords(
         response_model=CitiesResponse,
 )
 async def get_cities_with_weather_forecast(db: aiosqlite.Connection = Depends(get_db)) -> CitiesResponse:
+    cities = await get_list_of_cities(db)
+    return CitiesResponse(cities=cities) 
 
-
-    pass
+    
 
 
 @router.get(
