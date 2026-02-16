@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 import asyncio
 import httpx
 
@@ -70,33 +70,7 @@ async def get_list_of_cities(db:aiosqlite.Connection) -> list[str]:
     return result
 
 
-async def save_current_wether_every_15_min(db: aiosqlite.Connection) -> None:
-    """"""
 
-    while True:
-        date = datetime.now()
-        cursor = await db.execute(
-            """
-            SELECT * FROM cities
-            """
-        )
-        cities_data = await cursor.fetchall()
-        for row in cities_data:
-            city, lat, lon, created_at = row
-
-            #Добавить проверку даты города из таблицы cities
-
-            weather = await fetch_current_weather_by_coords(lat, lon)
-            await db.execute(
-                """
-                INSERT INTO WEATHER (city, temperature, himidity, wind_speed, preciptation)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (city, weather["current"]["temperature_2m"], weather["current"]["relative_humidity_2m"],
-                 weather["current"]["wind_speed_10m"], weather["current"]["precipitation"])
-            )
-            
-        await asyncio.sleep(900.0)
 
 
 async def get_weather_from_db_by_city_time(city: str, time: str) -> dict:
