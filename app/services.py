@@ -1,10 +1,10 @@
+from datetime import datetime
+import asyncio
 import httpx
 
-from datetime import datetime
+from fastapi import HTTPException
 
 import aiosqlite
-
-import asyncio
 
 from app.dependancy import get_db
 
@@ -46,13 +46,17 @@ async def get_current_weather_to_show(lat: float, lon: float) -> dict:
 
 
 async def add_city_to_db(city: str, lat: float, lon: float, db: aiosqlite.Connection):
-    await db.execute(
-        """
-        INSERT INTO cities (city, lat, lon)
-        """
-    )
-    pass
-
+    try:
+        await db.execute(
+            """
+            INSERT INTO cities (city, latitude, longitude)
+            VALUES (?, ?, ?)
+            """,
+            (city, lat, lon)
+        )
+        await db.commit()
+    except(aiosqlite.IntegrityError):
+        raise HTTPException(403, "Город уже добавлен")
 
 
 async def save_current_wether_every_15_min(city: str, lat: float, lon: float) -> dict:
