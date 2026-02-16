@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, HTTPException
 
 import aiosqlite
 
@@ -12,6 +12,7 @@ from app.schemas import (
 )
 from app.services import (
     get_current_weather_to_show,
+    add_city_to_db,
 )
 
 router = APIRouter(
@@ -47,10 +48,11 @@ async def get_current_weather(lat: float, lon: float) -> CurrentResponse:
 )
 async def add_city_with_coords(
     request: CityCreate,
-    db: aiosqlite.Connection = Depends(get_db)):
-
-
-    pass
+    db: aiosqlite.Connection = Depends(get_db)) -> None:
+    """Добавить город в список городов для мониторинга погоды"""
+    
+    return await add_city_to_db(request.city, request.lat, request.lon, db)
+    
 
 
 @router.get(
