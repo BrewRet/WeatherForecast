@@ -20,6 +20,7 @@ async def save_current_wether_every_15_min() -> None:
             try:
 
                 date_now = date.today().isoformat()
+                
                 async with db.execute(
                     """
                     SELECT city, latitude, longitude, created_at FROM cities
@@ -34,11 +35,17 @@ async def save_current_wether_every_15_min() -> None:
                             weather = await fetch_current_weather_by_coords(lat, lon)
                             await db.execute(
                                 """
-                                INSERT INTO weather (city, temperature, humidity, wind_speed, precipitation)
-                                VALUES (?, ?, ?, ?, ?)
+                                INSERT INTO weather (city, time, temperature, humidity, wind_speed, precipitation)
+                                VALUES (?, ?, ?, ?, ?, ?)
                                 """,
-                                (city, weather["current"]["temperature_2m"], weather["current"]["relative_humidity_2m"],
-                                weather["current"]["wind_speed_10m"], weather["current"]["precipitation"])
+                                (
+                                city, 
+                                weather["current"]["time"].split("T")[1], 
+                                weather["current"]["temperature_2m"],
+                                weather["current"]["relative_humidity_2m"],
+                                weather["current"]["wind_speed_10m"], 
+                                weather["current"]["precipitation"]
+                                )
                             )
                             await db.commit()
                 await db.close()
