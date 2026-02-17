@@ -21,6 +21,7 @@ async def init_db():
         await db.execute("""
             CREATE TABLE IF NOT EXISTS weather (
                 city TEXT,
+                time TEXT,
                 temperature REAL,
                 humidity REAL,
                 wind_speed REAL,
