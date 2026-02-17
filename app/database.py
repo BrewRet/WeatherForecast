@@ -8,6 +8,7 @@ settings = get_settings()
 async def init_db():
     async with aiosqlite.connect(settings.db_path) as db:
         await db.execute("PRAGMA foreign_keys = ON")
+        await db.execute("PRAGMA journal_mode = WAL")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS cities (
                 city TEXT NOT NULL UNIQUE,
@@ -19,13 +20,13 @@ async def init_db():
 
         await db.execute("""
             CREATE TABLE IF NOT EXISTS weather (
-                city TEXT
-                time TEXT,
+                city TEXT,
                 temperature REAL,
                 humidity REAL,
                 wind_speed REAL,
                 precipitation REAL,
-                FOREIGN KEY (city) REFERENCES cities(city)
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (city) REFERENCES cities(city) ON DELETE CASCADE
             )
         """)
         await db.commit()
