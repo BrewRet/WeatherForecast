@@ -23,12 +23,20 @@ logger.info(
     f"Starting {settings.app_name} v{settings.version} on {settings.host}:{settings.port}"
 )
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    task = asyncio.create_task(save_current_wether_every_15_min())
-    yield
-    task.cancel()
+    try:
+        task = asyncio.create_task(save_current_wether_every_15_min())
+        yield
+    except Exception as e:
+        logger.error(f"Ошибка инициализации планировщика: {e}")
+    finally:
+        task.cancel()
+        logger.info("Обновление погоды остановлено")
+
+
 
 app = FastAPI(
     title=settings.app_name,
@@ -46,7 +54,7 @@ app = FastAPI(
     """,
     version=settings.version,
     debug=settings.debug,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.include_router(weather_router)
