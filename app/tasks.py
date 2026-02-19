@@ -50,5 +50,5 @@ async def save_current_wether_every_15_min() -> None:
                             await db.commit()
                 await db.close()
             except Exception as e:
-                logger.error(e)
+                logger.error(f"Ошибка фоновой задачи: {e}")
         await asyncio.sleep(900)
