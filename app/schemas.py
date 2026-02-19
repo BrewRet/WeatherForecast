@@ -17,12 +17,6 @@ class CitiesResponse(BaseModel):
     cities: list[str] | None
 
 
-class CityRequestParams(BaseModel):
-    temperature: bool = False
-    humidity: bool = False
-    wind_speed: bool = False
-    precipitation: bool = False
-
 
 class CityResponse(BaseModel):
     city: str
