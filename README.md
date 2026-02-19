@@ -44,7 +44,7 @@ REST API weather_forecast
 ### Для четвертого метода был реализован GET эндпроинт **/weather/city** c query параметрами:
 
 - **city** город.
-- **time** время в формате ЧЧ:ММ.
+- **time** время в формате ЧЧ:ММ str.
 - **temperature** температура bool.
 - **humidity** влажность bool.
 - **wind_speed** скорость ветра bool.
