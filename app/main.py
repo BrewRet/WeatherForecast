@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.info(
-    f"Starting {settings.app_name} v{settings.version} on {settings.host}:{settings.port}"
+    f"Запуск {settings.app_name} v{settings.version} на {settings.host}:{settings.port}"
 )
 
 
