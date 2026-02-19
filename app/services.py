@@ -1,8 +1,12 @@
 from datetime import datetime, date
 import asyncio
 import httpx
+import logging
 
 import aiosqlite
+
+
+logger = logging.getLogger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 HTTP_TIMEOUT = 10.0
@@ -20,6 +24,7 @@ async def fetch_current_weather_by_coords(lat: float, lon: float) -> dict:
                 "longitude": lon,
                 "wind_speed_unit": "ms",
                 "current": CURRENT_WEATHER_PARAMS,
+                "timezone": "Asia/Krasnoyarsk",
             },
         )
         response.raise_for_status()
@@ -33,30 +38,31 @@ async def get_current_weather_to_show(lat: float, lon: float) -> dict:
     weather = await fetch_current_weather_by_coords(lat, lon)
 
     return {
-        "current": {
             "temperature": weather["current"]["temperature_2m"],
             "wind_speed": weather["current"]["wind_speed_10m"],
             "atmospheric_pressure": weather["current"]["surface_pressure"],
-        }
     }
 
 
 async def add_city_to_db(city: str, lat: float, lon: float, db: aiosqlite.Connection):
     """Добавление города в базу данных"""
-
-    await db.execute(
-        """
-        INSERT INTO cities (city, latitude, longitude)
-        VALUES (?, ?, ?)
-        """,
-        (city, lat, lon)
-    )
+    try:
+        await db.execute(
+            """
+            INSERT INTO cities (city, latitude, longitude)
+            VALUES (?, ?, ?)
+            """,
+            (city, lat, lon)
+        )
+        await db.commit()
+    except aiosqlite.Error as e:
+        logger.error(f"Ошибка записи в базу данных: {e}")
    
 
 
 async def get_list_of_cities(db:aiosqlite.Connection) -> list[str]:
     """Выдача городов из базы данных"""
-
+    
     cursor = await db.execute(
         """
         SELECT city FROM cities 
@@ -70,13 +76,31 @@ async def get_list_of_cities(db:aiosqlite.Connection) -> list[str]:
     return result
 
 
-
-
-
-async def get_weather_from_db_by_city_time(city: str, time: str) -> dict:
+async def get_weather_from_db_by_city_time(city, time, params: dict[str:bool], db: aiosqlite.Connection) -> dict:
     """"""
-    
-    pass
+    hours, mins = time.split(":")
+    mins = int(mins) // 15 * 15 
+    time = f"{hours}:{mins:02d}"
+    result = {}
+    try:
+        cursor = await db.execute(
+            """
+            SELECT temperature, humidity, wind_speed, precipitation
+            FROM weather WHERE city = ? AND time = ?
+            """,
+            (city, time)
+        )
+        row = await cursor.fetchone()
+        i = 0
+        if not row:
+            for key, value in params.items():
+                if value:
+                    result[key] = row[i]
+                i += 1
+                
+    except aiosqlite.Error as e:
+        logger.error(f"Ошибка {e}")
+    return result
 
 
 
