@@ -1,11 +1,11 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, status, Depends, HTTPException, Query
 
 import aiosqlite
+import logging  
 
 from app.dependancy import get_db
 from app.schemas import (
     CurrentResponse,
-    CityRequestParams,
     CitiesResponse,
     CityCreate,
     CityResponse,
@@ -14,7 +14,10 @@ from app.services import (
     get_current_weather_to_show,
     add_city_to_db,
     get_list_of_cities,
+    get_weather_from_db_by_city_time,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/weather",
@@ -36,16 +39,13 @@ async def get_current_weather(lat: float, lon: float) -> CurrentResponse:
     - **lon**: широта
     """
     data = await get_current_weather_to_show(lat, lon)
-    return CurrentResponse(
-        temperature=data["temperature"],
-        wind_speed=data["wind_speed"],
-        atmospheric_pressure=data["atmospheric_pressure"],
-    )
+    return CurrentResponse(**data)
 
 
 @router.post(
         "/cities",
-        
+        status_code=status.HTTP_201_CREATED,
+        summary="Добавить город и его координаты в базу данных"
 )
 async def add_city_with_coords(
     request: CityCreate,
@@ -63,6 +63,8 @@ async def add_city_with_coords(
 @router.get(
         "/cities",
         response_model=CitiesResponse,
+        status_code=status.HTTP_200_OK,
+        summary="Получить список городов, для которых доступен прогноз"
 )
 async def get_cities_with_weather_forecast(db: aiosqlite.Connection = Depends(get_db)) -> CitiesResponse:
     cities = await get_list_of_cities(db)
@@ -72,15 +74,31 @@ async def get_cities_with_weather_forecast(db: aiosqlite.Connection = Depends(ge
 
 
 @router.get(
-        "/cities/{city}/{time}",
-        response_model=CityResponse
+        "/city",
+        response_model=CityResponse,
+        status_code=status.HTTP_200_OK,
+        summary="Получить погоду по городу и времени"
 )
 async def get_weather_from_city_at_time(
     city: str,
-    time: str, 
-    params: CityRequestParams,
+    time: str,
+    temperature: bool = Query(False, description="Включить температуру"),
+    humidity: bool = Query(False, description="Включить влажность"),
+    wind_speed: bool = Query(False, description="Включить скорость ветра"),
+    precipitation: bool = Query(False, description="Включить осадки"),
     db: aiosqlite.Connection = Depends(get_db),
     ) -> CityResponse:
 
-
-    pass
+    params = {
+        "temperature": temperature,
+        "humidity": humidity,
+        "wind_speed": wind_speed,
+        "precipitation": precipitation,
+    }
+    
+    result = await get_weather_from_db_by_city_time(city, time, params, db)
+    if not result:
+        raise HTTPException(404, "Не найдена погода в заданом городе по заданному времени")
+    return CityResponse(**result)
+    
+    
